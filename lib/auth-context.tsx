@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from './types';
-import { authApi } from './api';
 
 interface AuthContextType {
   user: User | null;
@@ -14,55 +13,64 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Mock admin user for demo
+const MOCK_ADMIN: User = {
+  id: 'admin-001',
+  email: 'admin@1oral.com',
+  name: 'Admin User',
+  role: 'ADMIN',
+  createdAt: '2025-01-01T00:00:00Z',
+  updatedAt: '2025-01-01T00:00:00Z',
+};
+
+// Valid mock credentials
+const MOCK_CREDENTIALS = [
+  { email: 'admin@1oral.com', password: 'admin123', user: MOCK_ADMIN },
+  { email: 'dr.smith@1oral.com', password: 'doctor123', user: { ...MOCK_ADMIN, id: 'dr-001', email: 'dr.smith@1oral.com', name: 'Dr. John Smith', role: 'DOCTOR' as const } },
+];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('admin_token');
-      if (token) {
-        try {
-          const userData = await authApi.getMe();
-          // Only allow admin users
-          if (userData.role === 'ADMIN' || userData.role === 'DOCTOR') {
-            setUser(userData);
-          } else {
-            localStorage.removeItem('admin_token');
-            localStorage.removeItem('admin_user');
-          }
-        } catch {
-          localStorage.removeItem('admin_token');
-          localStorage.removeItem('admin_user');
+    // Check for saved user in localStorage
+    const savedUser = localStorage.getItem('admin_user');
+    if (savedUser) {
+      try {
+        const userData = JSON.parse(savedUser);
+        if (userData.role === 'ADMIN' || userData.role === 'DOCTOR') {
+          setUser(userData);
         }
+      } catch {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
       }
-      setLoading(false);
-    };
-
-    initAuth();
+    }
+    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { user: userData, token } = await authApi.login(email, password);
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Only allow admin or doctor users
-    if (userData.role !== 'ADMIN' && userData.role !== 'DOCTOR') {
-      throw new Error('Access denied. Admin or Doctor privileges required.');
+    // Check mock credentials
+    const match = MOCK_CREDENTIALS.find(
+      cred => cred.email === email && cred.password === password
+    );
+
+    if (!match) {
+      throw new Error('Invalid email or password');
     }
 
-    localStorage.setItem('admin_token', token);
-    localStorage.setItem('admin_user', JSON.stringify(userData));
-    setUser(userData as User);
+    localStorage.setItem('admin_token', 'mock-token-' + Date.now());
+    localStorage.setItem('admin_user', JSON.stringify(match.user));
+    setUser(match.user as User);
     router.push('/');
   };
 
   const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Ignore logout errors
-    }
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     setUser(null);
