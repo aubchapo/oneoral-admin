@@ -1,58 +1,4 @@
-import axios from 'axios';
-import type { User, AuthResponse, ApiResponse } from './types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
-
-// Handle auth errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Auth API
-export const authApi = {
-  login: async (email: string, password: string): Promise<AuthResponse> => {
-    const { data } = await api.post<ApiResponse<AuthResponse>>('/auth/login', {
-      email,
-      password,
-    });
-    return data.data!;
-  },
-
-  getMe: async (): Promise<User> => {
-    const { data } = await api.get<ApiResponse<User>>('/auth/me');
-    return data.data!;
-  },
-
-  logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
-  },
-};
+import type { User } from './types';
 
 // Lead type for the CRM
 export interface Lead {
@@ -82,203 +28,174 @@ export interface Subscriber {
   totalSpent: number;
 }
 
-// Mock data for now - will be replaced with real API calls
+// Name generators for realistic data
+const firstNames = [
+  'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
+  'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen',
+  'Christopher', 'Nancy', 'Daniel', 'Lisa', 'Matthew', 'Betty', 'Anthony', 'Margaret', 'Mark', 'Sandra',
+  'Donald', 'Ashley', 'Steven', 'Kimberly', 'Paul', 'Emily', 'Andrew', 'Donna', 'Joshua', 'Michelle',
+  'Kenneth', 'Dorothy', 'Kevin', 'Carol', 'Brian', 'Amanda', 'George', 'Melissa', 'Edward', 'Deborah',
+  'Ronald', 'Stephanie', 'Timothy', 'Rebecca', 'Jason', 'Sharon', 'Jeffrey', 'Laura', 'Ryan', 'Cynthia',
+  'Jacob', 'Kathleen', 'Gary', 'Amy', 'Nicholas', 'Angela', 'Eric', 'Shirley', 'Jonathan', 'Anna',
+  'Stephen', 'Brenda', 'Larry', 'Pamela', 'Justin', 'Emma', 'Scott', 'Nicole', 'Brandon', 'Helen',
+  'Benjamin', 'Samantha', 'Samuel', 'Katherine', 'Raymond', 'Christine', 'Gregory', 'Debra', 'Frank', 'Rachel',
+  'Alexander', 'Carolyn', 'Patrick', 'Janet', 'Jack', 'Catherine', 'Dennis', 'Maria', 'Jerry', 'Heather',
+];
+
+const lastNames = [
+  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+  'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+  'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
+  'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+  'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts',
+  'Gomez', 'Phillips', 'Evans', 'Turner', 'Diaz', 'Parker', 'Cruz', 'Edwards', 'Collins', 'Reyes',
+  'Stewart', 'Morris', 'Morales', 'Murphy', 'Cook', 'Rogers', 'Gutierrez', 'Ortiz', 'Morgan', 'Cooper',
+  'Peterson', 'Bailey', 'Reed', 'Kelly', 'Howard', 'Ramos', 'Kim', 'Cox', 'Ward', 'Richardson',
+  'Watson', 'Brooks', 'Chavez', 'Wood', 'James', 'Bennett', 'Gray', 'Mendoza', 'Ruiz', 'Hughes',
+  'Price', 'Alvarez', 'Castillo', 'Sanders', 'Patel', 'Myers', 'Long', 'Ross', 'Foster', 'Jimenez',
+];
+
+const solutions = ['cavities', 'whitening', 'breath', 'drill-free', 'telehealth', 'biotest'];
+const plans: Record<string, string> = {
+  'cavities': 'Cavity Prevention',
+  'whitening': 'Whitening System',
+  'breath': 'Fresh Breath Protocol',
+  'drill-free': 'Drill-Free Care',
+  'telehealth': 'Virtual Dentist',
+  'biotest': 'Microbiome Testing',
+};
+
+const emailDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'icloud.com', 'hotmail.com', 'aol.com'];
+
+// Seeded random number generator for consistent data
+function seededRandom(seed: number): () => number {
+  return function() {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+}
+
+// Generate 30,000 subscribers
+function generateSubscribers(): Subscriber[] {
+  const subscribers: Subscriber[] = [];
+  const random = seededRandom(12345);
+
+  for (let i = 0; i < 30000; i++) {
+    const firstName = firstNames[Math.floor(random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(random() * lastNames.length)];
+    const domain = emailDomains[Math.floor(random() * emailDomains.length)];
+    const solution = solutions[Math.floor(random() * solutions.length)];
+
+    // Status distribution: 85% active, 10% paused, 5% cancelled
+    const statusRoll = random();
+    const status: 'active' | 'paused' | 'cancelled' =
+      statusRoll < 0.85 ? 'active' : statusRoll < 0.95 ? 'paused' : 'cancelled';
+
+    // Generate start date (between 1-18 months ago)
+    const monthsAgo = Math.floor(random() * 18) + 1;
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsAgo);
+
+    // Next billing date (next month from now, unless cancelled)
+    const nextBillingDate = new Date();
+    nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+
+    const totalSpent = status === 'cancelled'
+      ? Math.floor(random() * 6 + 1) * 49
+      : monthsAgo * 49;
+
+    subscribers.push({
+      id: `sub-${String(i + 1).padStart(6, '0')}`,
+      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Math.floor(random() * 100)}@${domain}`,
+      name: `${firstName} ${lastName}`,
+      plan: plans[solution],
+      status,
+      solution,
+      startDate: startDate.toISOString().split('T')[0],
+      nextBillingDate: status === 'cancelled' ? '-' : nextBillingDate.toISOString().split('T')[0],
+      monthlyAmount: 49,
+      totalSpent,
+    });
+  }
+
+  return subscribers;
+}
+
+// Generate leads (500 leads)
+function generateLeads(): Lead[] {
+  const leads: Lead[] = [];
+  const random = seededRandom(67890);
+  const sources = ['Quiz', 'Smile Simulator', 'Direct', 'Referral', 'Social Media', 'Google Ads'];
+
+  for (let i = 0; i < 500; i++) {
+    const firstName = firstNames[Math.floor(random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(random() * lastNames.length)];
+    const domain = emailDomains[Math.floor(random() * emailDomains.length)];
+    const solution = solutions[Math.floor(random() * solutions.length)] as Lead['solution'];
+    const source = sources[Math.floor(random() * sources.length)];
+
+    // Status distribution: 40% new, 25% contacted, 15% qualified, 15% converted, 5% lost
+    const statusRoll = random();
+    const status: Lead['status'] =
+      statusRoll < 0.40 ? 'new' :
+      statusRoll < 0.65 ? 'contacted' :
+      statusRoll < 0.80 ? 'qualified' :
+      statusRoll < 0.95 ? 'converted' : 'lost';
+
+    // Created within last 30 days
+    const daysAgo = Math.floor(random() * 30);
+    const createdAt = new Date();
+    createdAt.setDate(createdAt.getDate() - daysAgo);
+
+    leads.push({
+      id: `lead-${String(i + 1).padStart(5, '0')}`,
+      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Math.floor(random() * 100)}@${domain}`,
+      name: `${firstName} ${lastName}`,
+      phone: random() > 0.4 ? `555-${String(Math.floor(random() * 10000)).padStart(4, '0')}` : undefined,
+      solution,
+      status,
+      source,
+      createdAt: createdAt.toISOString(),
+      updatedAt: createdAt.toISOString(),
+    });
+  }
+
+  // Sort by created date (newest first)
+  return leads.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+// Cache the generated data
+let cachedSubscribers: Subscriber[] | null = null;
+let cachedLeads: Lead[] | null = null;
+
+// Mock data API
 export const adminApi = {
   // Get all subscribers
   getSubscribers: async (): Promise<Subscriber[]> => {
-    // Mock data - replace with actual API call
-    return [
-      {
-        id: 'sub-001',
-        email: 'aubrey@example.com',
-        name: 'Aubrey Lang',
-        plan: 'Cavity Prevention',
-        status: 'active',
-        solution: 'cavities',
-        startDate: '2025-11-15',
-        nextBillingDate: '2026-02-15',
-        monthlyAmount: 49,
-        totalSpent: 147,
-      },
-      {
-        id: 'sub-002',
-        email: 'sarah@example.com',
-        name: 'Sarah Mitchell',
-        plan: 'Whitening System',
-        status: 'active',
-        solution: 'whitening',
-        startDate: '2025-12-01',
-        nextBillingDate: '2026-02-01',
-        monthlyAmount: 49,
-        totalSpent: 98,
-      },
-      {
-        id: 'sub-003',
-        email: 'james@example.com',
-        name: 'James Wilson',
-        plan: 'Fresh Breath Protocol',
-        status: 'active',
-        solution: 'breath',
-        startDate: '2026-01-10',
-        nextBillingDate: '2026-02-10',
-        monthlyAmount: 49,
-        totalSpent: 49,
-      },
-      {
-        id: 'sub-004',
-        email: 'emily@example.com',
-        name: 'Emily Chen',
-        plan: 'Cavity Prevention',
-        status: 'paused',
-        solution: 'cavities',
-        startDate: '2025-10-20',
-        nextBillingDate: '2026-03-20',
-        monthlyAmount: 49,
-        totalSpent: 147,
-      },
-      {
-        id: 'sub-005',
-        email: 'michael@example.com',
-        name: 'Michael Torres',
-        plan: 'Drill-Free Care',
-        status: 'active',
-        solution: 'drill-free',
-        startDate: '2025-12-15',
-        nextBillingDate: '2026-02-15',
-        monthlyAmount: 49,
-        totalSpent: 98,
-      },
-    ];
+    if (!cachedSubscribers) {
+      cachedSubscribers = generateSubscribers();
+    }
+    return cachedSubscribers;
   },
 
   // Get all leads
   getLeads: async (): Promise<Lead[]> => {
-    // Mock data - replace with actual API call
-    return [
-      {
-        id: 'lead-001',
-        email: 'john.d@gmail.com',
-        name: 'John Davis',
-        phone: '555-0101',
-        solution: 'cavities',
-        status: 'new',
-        source: 'Quiz',
-        createdAt: '2026-02-08T14:30:00Z',
-        updatedAt: '2026-02-08T14:30:00Z',
-      },
-      {
-        id: 'lead-002',
-        email: 'lisa.m@yahoo.com',
-        name: 'Lisa Martinez',
-        solution: 'whitening',
-        status: 'contacted',
-        source: 'Quiz',
-        notes: 'Interested in whitening, asked about pricing',
-        createdAt: '2026-02-07T10:15:00Z',
-        updatedAt: '2026-02-08T09:00:00Z',
-      },
-      {
-        id: 'lead-003',
-        email: 'robert.k@outlook.com',
-        name: 'Robert Kim',
-        phone: '555-0202',
-        solution: 'breath',
-        status: 'qualified',
-        source: 'Telehealth Consult',
-        notes: 'Has chronic bad breath issues, ready to start',
-        createdAt: '2026-02-06T16:45:00Z',
-        updatedAt: '2026-02-08T11:30:00Z',
-      },
-      {
-        id: 'lead-004',
-        email: 'amanda.w@gmail.com',
-        name: 'Amanda White',
-        solution: 'drill-free',
-        status: 'new',
-        source: 'Quiz',
-        createdAt: '2026-02-08T08:20:00Z',
-        updatedAt: '2026-02-08T08:20:00Z',
-      },
-      {
-        id: 'lead-005',
-        email: 'david.l@icloud.com',
-        name: 'David Lee',
-        phone: '555-0303',
-        solution: 'telehealth',
-        status: 'converted',
-        source: 'Direct',
-        notes: 'Converted to telehealth subscription',
-        createdAt: '2026-02-01T12:00:00Z',
-        updatedAt: '2026-02-05T15:00:00Z',
-      },
-      {
-        id: 'lead-006',
-        email: 'jennifer.b@gmail.com',
-        name: 'Jennifer Brown',
-        solution: 'biotest',
-        status: 'contacted',
-        source: 'Quiz',
-        createdAt: '2026-02-07T14:00:00Z',
-        updatedAt: '2026-02-08T10:00:00Z',
-      },
-      {
-        id: 'lead-007',
-        email: 'chris.p@yahoo.com',
-        name: 'Chris Parker',
-        solution: 'cavities',
-        status: 'new',
-        source: 'Quiz',
-        createdAt: '2026-02-08T16:00:00Z',
-        updatedAt: '2026-02-08T16:00:00Z',
-      },
-      {
-        id: 'lead-008',
-        email: 'nicole.h@gmail.com',
-        name: 'Nicole Harris',
-        phone: '555-0404',
-        solution: 'whitening',
-        status: 'qualified',
-        source: 'Smile Simulator',
-        notes: 'Used smile simulator, very interested',
-        createdAt: '2026-02-06T09:30:00Z',
-        updatedAt: '2026-02-08T14:00:00Z',
-      },
-      {
-        id: 'lead-009',
-        email: 'mark.t@outlook.com',
-        name: 'Mark Thompson',
-        solution: 'drill-free',
-        status: 'lost',
-        source: 'Quiz',
-        notes: 'No dentist in their area',
-        createdAt: '2026-02-03T11:00:00Z',
-        updatedAt: '2026-02-07T09:00:00Z',
-      },
-      {
-        id: 'lead-010',
-        email: 'rachel.g@gmail.com',
-        name: 'Rachel Green',
-        solution: 'cavities',
-        status: 'new',
-        source: 'Quiz',
-        createdAt: '2026-02-08T17:30:00Z',
-        updatedAt: '2026-02-08T17:30:00Z',
-      },
-    ];
+    if (!cachedLeads) {
+      cachedLeads = generateLeads();
+    }
+    return cachedLeads;
   },
 
   // Update lead status
   updateLeadStatus: async (id: string, status: Lead['status']): Promise<Lead> => {
-    // Mock - replace with actual API call
     console.log(`Updating lead ${id} to status ${status}`);
     return {} as Lead;
   },
 
-  // Get users (patients)
+  // Get users (patients) - not used in mock mode
   getUsers: async (): Promise<User[]> => {
-    const { data } = await api.get<ApiResponse<User[]>>('/admin/users');
-    return data.data || [];
+    return [];
   },
 };
 
-export default api;
+export default {};
