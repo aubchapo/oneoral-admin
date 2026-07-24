@@ -35,23 +35,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
   const router = useRouter();
 
-  // Use a separate effect for initialization that only runs once
+  // Use a separate effect for initialization that only runs once.
+  // Real access control is the HTTP Basic gate in middleware.ts — anyone who
+  // reaches this code is already authenticated, so sign them in automatically
+  // instead of showing a second (mock) login form.
   useEffect(() => {
     if (initialized) return;
 
+    let resolved: User | null = null;
     const savedUser = localStorage.getItem('admin_user');
     if (savedUser) {
       try {
         const userData = JSON.parse(savedUser);
         if (userData.role === 'ADMIN' || userData.role === 'DOCTOR') {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setUser(userData);
+          resolved = userData;
         }
       } catch {
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_user');
       }
     }
+    if (!resolved) {
+      resolved = MOCK_ADMIN;
+      localStorage.setItem('admin_token', 'auto-' + Date.now());
+      localStorage.setItem('admin_user', JSON.stringify(MOCK_ADMIN));
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setUser(resolved);
     setLoading(false);
     setInitialized(true);
   }, [initialized]);
