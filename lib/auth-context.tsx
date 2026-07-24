@@ -16,8 +16,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Mock admin user for demo
 const MOCK_ADMIN: User = {
   id: 'admin-001',
-  email: 'admin@1oral.com',
-  name: 'Admin User',
+  email: 'alang@oneoral.com',
+  name: 'Aubrey Lang',
   role: 'ADMIN',
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
@@ -25,22 +25,26 @@ const MOCK_ADMIN: User = {
 
 // Valid mock credentials
 const MOCK_CREDENTIALS = [
-  { email: 'admin@1oral.com', password: 'admin123', user: MOCK_ADMIN },
-  { email: 'dr.smith@1oral.com', password: 'doctor123', user: { ...MOCK_ADMIN, id: 'dr-001', email: 'dr.smith@1oral.com', name: 'Dr. John Smith', role: 'DOCTOR' as const } },
+  { email: 'alang@oneoral.com', password: 'admin123', user: MOCK_ADMIN },
+  { email: 'dr.smith@oneoral.com', password: 'doctor123', user: { ...MOCK_ADMIN, id: 'dr-001', email: 'dr.smith@oneoral.com', name: 'Dr. John Smith', role: 'DOCTOR' as const } },
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const router = useRouter();
 
+  // Use a separate effect for initialization that only runs once
   useEffect(() => {
-    // Check for saved user in localStorage
+    if (initialized) return;
+
     const savedUser = localStorage.getItem('admin_user');
     if (savedUser) {
       try {
         const userData = JSON.parse(savedUser);
         if (userData.role === 'ADMIN' || userData.role === 'DOCTOR') {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setUser(userData);
         }
       } catch {
@@ -49,7 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     setLoading(false);
-  }, []);
+    setInitialized(true);
+  }, [initialized]);
 
   const login = async (email: string, password: string) => {
     // Simulate network delay
