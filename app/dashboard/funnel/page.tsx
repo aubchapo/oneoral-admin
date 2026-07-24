@@ -32,9 +32,12 @@ interface CardIntent {
 interface FunnelLead {
   id: string;
   firstName: string;
+  lastName?: string;
   email: string;
   phone?: string;
   smsConsent: boolean;
+  dob?: string;
+  address?: { line1: string; line2?: string; city: string; state: string; zip: string };
   score?: number;
   tier?: string;
   topConcern?: string;
@@ -123,14 +126,22 @@ function csvEscape(value: string): string {
 
 function downloadCsv(leads: FunnelLead[]) {
   const headers = [
-    'name', 'email', 'phone', 'sms_consent', 'score', 'tier', 'top_concern', 'source', 'kit',
+    'name', 'last_name', 'email', 'dob', 'addr_line1', 'addr_line2', 'addr_city', 'addr_state',
+    'addr_zip', 'phone', 'sms_consent', 'score', 'tier', 'top_concern', 'source', 'kit',
     'hero_variant', 'offer_variant', 'card_submitted', 'card_brand', 'card_last4',
     'card_submitted_at', 'waitlist_position', 'answers_json', 'tags', 'created_at',
   ];
   const rows = leads.map((l) =>
     [
       l.firstName,
+      l.lastName ?? '',
       l.email,
+      l.dob ?? '',
+      l.address?.line1 ?? '',
+      l.address?.line2 ?? '',
+      l.address?.city ?? '',
+      l.address?.state ?? '',
+      l.address?.zip ?? '',
       l.smsConsent && l.phone ? l.phone : '',
       String(l.smsConsent),
       l.score != null ? String(l.score) : '',
@@ -413,7 +424,9 @@ export default function DryTestPage() {
                 <tbody className="divide-y divide-slate-100">
                   {leads.map((l) => (
                     <tr key={l.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-semibold text-slate-900">{l.firstName || '—'}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-900">
+                        {[l.firstName, l.lastName].filter(Boolean).join(' ') || '—'}
+                      </td>
                       <td className="px-4 py-3 text-slate-600">{l.email}</td>
                       <td className="px-4 py-3 text-base font-semibold tabular-nums text-primary-600">
                         {l.score != null ? l.score : '—'}
