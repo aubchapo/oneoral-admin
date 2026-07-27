@@ -12,7 +12,31 @@ const goalColors: Record<string, string> = {
   whitening: 'bg-amber-100 text-amber-700',
   breath: 'bg-emerald-100 text-emerald-700',
   'drill-free': 'bg-purple-100 text-purple-700',
+  hydration: 'bg-sky-100 text-sky-700',
+  telehealth: 'bg-indigo-100 text-indigo-700',
+  biotest: 'bg-fuchsia-100 text-fuchsia-700',
 };
+
+// These are quiz option ids, not display copy. Without this map the table
+// prints the raw slug — which is how "drill-free" was showing up as the
+// nonsense tag "drill free" instead of the goal the lead actually picked.
+// Sources: the goal multi-select in app/lib/oral-health-quiz/steps.ts, plus the
+// ?goal= entry points on /salivary-test, /telehealth and /drill-free.
+const goalLabels: Record<string, string> = {
+  cavities: 'Cavity prevention',
+  gums: 'Gum health',
+  whitening: 'Whitening',
+  breath: 'Fresh breath',
+  'drill-free': 'Avoid the office',
+  hydration: 'Dry mouth',
+  telehealth: 'Teledental',
+  biotest: 'Bacteria test',
+};
+
+/** Fall back to a readable version of an id we haven't mapped yet. */
+function goalLabel(id: string): string {
+  return goalLabels[id] ?? id.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
+}
 
 const dropOffColors: Record<string, string> = {
   quiz: 'bg-teal-100 text-teal-700',
@@ -179,8 +203,8 @@ export default function LeadsPage() {
                       <div className="flex flex-wrap gap-1">
                         {(lead.goals ?? []).length > 0
                           ? (lead.goals ?? []).map(g => (
-                              <span key={g} className={cn('px-2 py-0.5 rounded-full text-xs font-medium capitalize', goalColors[g] || 'bg-slate-100 text-slate-600')}>
-                                {g.replace('-', ' ')}
+                              <span key={g} className={cn('px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap', goalColors[g] || 'bg-slate-100 text-slate-600')}>
+                                {goalLabel(g)}
                               </span>
                             ))
                           : <span className="text-xs text-slate-400">—</span>
