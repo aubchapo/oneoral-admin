@@ -13,6 +13,7 @@ import {
   UserPlus,
   FlaskConical,
   Globe,
+  ClipboardCheck,
   LogOut,
   Menu,
   X,
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Sales', href: '/dashboard/sales', icon: TrendingUp },
   { name: 'Traffic', href: '/dashboard/traffic', icon: Globe },
   { name: 'Leads (CRM)', href: '/dashboard/leads', icon: UserPlus },
+  { name: 'Retests', href: '/dashboard/retests', icon: ClipboardCheck },
   { name: 'Dry Test', href: '/dashboard/funnel', icon: FlaskConical },
 ];
 
