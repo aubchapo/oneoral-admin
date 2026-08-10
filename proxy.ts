@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // a client-side mock, and the API routes serve real member PII + revenue, so
 // production must not be publicly readable. HTTP Basic auth, credentials from
 // env — when ADMIN_USER / ADMIN_PASSWORD are unset (local dev), the gate is off.
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const user = process.env.ADMIN_USER;
   const pass = process.env.ADMIN_PASSWORD;
   if (!user || !pass) return NextResponse.next();

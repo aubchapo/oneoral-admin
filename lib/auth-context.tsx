@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   // Use a separate effect for initialization that only runs once.
-  // Real access control is the HTTP Basic gate in middleware.ts — anyone who
+  // Real access control is the HTTP Basic gate in proxy.ts — anyone who
   // reaches this code is already authenticated, so sign them in automatically
   // instead of showing a second (mock) login form.
   useEffect(() => {
