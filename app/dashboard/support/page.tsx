@@ -163,7 +163,10 @@ export default function SupportPage() {
   const spamCount = counts.spam ?? 0;
 
   return (
-    <div className="space-y-6">
+    // Same page frame every other tab uses (Overview, Leads, Sales, Traffic,
+    // Dry Test) — without it the inbox ran edge to edge against the sidebar
+    // and the window.
+    <div className="px-5 py-6 lg:py-10 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
