@@ -14,6 +14,7 @@ import {
   FlaskConical,
   Globe,
   ClipboardCheck,
+  Inbox,
   LogOut,
   Menu,
   X,
@@ -21,6 +22,7 @@ import {
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: Home },
+  { name: 'Support', href: '/dashboard/support', icon: Inbox },
   { name: 'Accounts', href: '/dashboard/accounts', icon: Users },
   { name: 'Sales', href: '/dashboard/sales', icon: TrendingUp },
   { name: 'Traffic', href: '/dashboard/traffic', icon: Globe },
