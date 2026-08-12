@@ -408,6 +408,10 @@ async function buildSubscriberFromCustomer(
     pauseResumesAt,
     kitType: kitTypeFromMetadata(subscription?.metadata) ?? kitTypeFromMetadata(customer.metadata),
     promoCode: subscription?.metadata?.promoCode || customer.metadata?.promoCode || undefined,
+    isFounding: subscription?.metadata?.foundingWhitening === 'true' || undefined,
+    foundingSlot: subscription?.metadata?.foundingWhiteningSlot
+      ? Number(subscription.metadata.foundingWhiteningSlot)
+      : undefined,
     plan: MEMBERSHIP_NAME,
     solution: 'cavities',
   };

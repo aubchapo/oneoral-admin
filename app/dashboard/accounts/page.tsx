@@ -107,7 +107,16 @@ export default function AccountsPage() {
                   {filtered.map((s) => (
                     <tr key={s.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => router.push(`/dashboard/accounts/${s.id}`)}>
                       <td className="px-6 py-4">
-                        <p className="font-medium text-slate-900 text-sm">{s.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900 text-sm">{s.name}</p>
+                          {s.isFounding && (
+                            <span title="Founding 500 — whitening free for 12 months while the membership stays active">
+                              <Badge className="border border-amber-200 bg-amber-50 text-amber-700">
+                                {s.foundingSlot ? `Founding #${s.foundingSlot}` : 'Founding 500'}
+                              </Badge>
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-slate-500">{s.email}</p>
                       </td>
                       <td className="px-6 py-4">

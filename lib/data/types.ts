@@ -81,6 +81,14 @@ export interface Subscriber {
   kitType?: KitType;
   /** Promo code applied at checkout (Stripe subscription metadata) */
   promoCode?: string;
+  /**
+   * Founding-500 free-whitening member. `foundingSlot` is their 1-based spot
+   * number; it's absent on subscriptions that took the offer but whose
+   * invoice.paid claim hasn't landed yet, so treat isFounding as the flag and
+   * the slot as decoration.
+   */
+  isFounding?: boolean;
+  foundingSlot?: number;
   // Back-compat
   plan: string;
   solution: string;

@@ -142,6 +142,13 @@ export default function MemberDetailPage() {
                       {member.promoCode}
                     </Badge>
                   )}
+                  {member.isFounding && (
+                    <span title="Whitening is free for 12 months while this membership stays active. Cancelling forfeits the remaining boxes and the spot is not restored.">
+                      <Badge className="bg-amber-50 text-amber-700 border-amber-200">
+                        {member.foundingSlot ? `Founding 500 · #${member.foundingSlot}` : 'Founding 500'}
+                      </Badge>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
