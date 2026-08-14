@@ -14,6 +14,7 @@ import {
   FlaskConical,
   Globe,
   ClipboardCheck,
+  Microscope,
   Inbox,
   LogOut,
   Menu,
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Traffic', href: '/dashboard/traffic', icon: Globe },
   { name: 'Leads (CRM)', href: '/dashboard/leads', icon: UserPlus },
   { name: 'Retests', href: '/dashboard/retests', icon: ClipboardCheck },
+  { name: 'Bio Tests', href: '/dashboard/bio-tests', icon: Microscope },
   { name: 'Dry Test', href: '/dashboard/funnel', icon: FlaskConical },
 ];
 
