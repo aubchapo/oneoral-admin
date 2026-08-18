@@ -149,7 +149,10 @@ export default function BioTestsPage() {
   const awaitingResult = orders.filter((o) => ['approved', 'kit_shipped', 'specimen_received'].includes(o.status));
 
   return (
-    <div className="space-y-6">
+    // Same frame as every other tab. This one had only `space-y-6`, so it ran
+    // edge to edge against the sidebar while Accounts, Sales, Support and the
+    // rest sat inside a padded, max-width column.
+    <div className="px-5 py-6 lg:py-10 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
