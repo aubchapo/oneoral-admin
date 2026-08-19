@@ -225,6 +225,40 @@ function isMembershipSub(sub: Stripe.Subscription, catalog: Catalog): boolean {
   return sub.items.data.some((it) => catalog.byPriceId.get(it.price.id)?.category === 'membership');
 }
 
+/**
+ * Is this subscription the customer's OWN membership?
+ *
+ * Family seats and practice platform fees are billed on the same membership
+ * prices, so isMembershipSub() says yes to all three — which is correct when
+ * the question is "is this membership revenue" and wrong when it's "what is
+ * this person on". A primary paying for two family members carries a second
+ * subscription of 2 x $39.99, and picking that one made the admin report $79.98
+ * as his monthly when his own plan is $65.56. The portal hit the identical bug
+ * and marks the two exceptions in metadata (see lib/plan-addons.ts there);
+ * this is the same test, on this side of the wall.
+ */
+function isOwnMembershipSub(sub: Stripe.Subscription, catalog: Catalog): boolean {
+  const kind = sub.metadata?.kind;
+  return isMembershipSub(sub, catalog) && kind !== 'family_members' && kind !== 'practice_platform_fee';
+}
+
+/** What a customer pays for OTHER people's seats — never part of their own plan. */
+function familySeatMonthly(
+  subs: Stripe.Subscription[],
+  catalog: Catalog,
+  coupons: Map<string, CouponTerms>
+): { monthly: number; seats: number } {
+  let monthly = 0;
+  let seats = 0;
+  for (const sub of subs) {
+    if (sub.metadata?.kind !== 'family_members') continue;
+    if (sub.status !== 'active' && sub.status !== 'trialing' && sub.status !== 'past_due') continue;
+    monthly += subTotalMonthly(sub, catalog, coupons);
+    seats += sub.items.data.reduce((n, it) => Math.max(n, it.quantity ?? 1), 0);
+  }
+  return { monthly: Math.round(monthly * 100) / 100, seats };
+}
+
 // ---- Coupons (so RR reflects what members actually pay, not list price) ----
 
 interface CouponTerms {
@@ -317,6 +351,38 @@ function subRecurring(
   return { period: Math.round(period * 100) / 100, months };
 }
 
+/**
+ * Everything recurring on this subscription as $/month — membership AND the
+ * add-ons riding on it.
+ *
+ * Separate from subRecurring() on purpose. That one answers "how much
+ * membership revenue" and feeds the dashboard's MRR, which is deliberately kept
+ * apart from add-on revenue. This one answers "what does this person actually
+ * pay every month", which is the number on their own billing page and the only
+ * one they'd recognise: a member on the complete plan with three add-ons is
+ * charged $65.56, and reporting $49.99 because the add-ons sat in items we
+ * skipped made the admin disagree with the member's own screen.
+ *
+ * Per-item normalisation, so a quarterly add-on on a monthly plan is counted at
+ * a third of its charge rather than at face value.
+ */
+function subTotalMonthly(
+  sub: Stripe.Subscription,
+  catalog: Catalog,
+  coupons: Map<string, CouponTerms>
+): number {
+  let monthly = 0;
+  for (const it of sub.items.data) {
+    const info = catalog.byPriceId.get(it.price.id);
+    if (!info?.recurring) continue;
+    monthly += info.monthlyAmount * (it.quantity ?? 1);
+  }
+  const { multiplier, amountOff } = recurringDiscount(sub, coupons);
+  const { months } = subRecurring(sub, catalog, coupons);
+  const net = monthly * multiplier - amountOff / Math.max(1, months);
+  return Math.round(Math.max(0, net) * 100) / 100;
+}
+
 /** Real $/month across the sub's membership items (discounts applied, quarterly normalized). */
 function subMonthlyAmount(
   sub: Stripe.Subscription,
@@ -357,7 +423,7 @@ async function buildSubscriberFromCustomer(
       ? new Date(subscription.pause_collection.resumes_at * 1000).toISOString().split('T')[0]
       : undefined;
 
-  const monthlyAmount = subscription ? subMonthlyAmount(subscription, catalog, coupons) : 0;
+  const monthlyAmount = subscription ? subTotalMonthly(subscription, catalog, coupons) : 0;
 
   let membershipSpent = 0;
   let addonSpent = 0;
@@ -648,11 +714,12 @@ export const stripeSource: DataSource = {
     if (!cachedAllSubscribers || cachedAllSubscribers.expires < Date.now()) {
       const catalog = await getCatalog();
       const coupons = await getCoupons();
-      // Dedupe by customer id — Stripe creates a new subscription record each
-      // time someone resubscribes, so the same customer can show up many times.
-      // Keep the "best" one: active > paused > cancelled, then newest start.
-      const rank: Record<Subscriber['status'], number> = { active: 4, paused: 3, cancelled: 2, incomplete: 1 };
-      const byCustomer = new Map<string, Subscriber>();
+      // Collect every subscription per customer first, then decide. Deciding
+      // inside the loop is what produced the family-seat bug: each subscription
+      // was ranked on status and start date alone, so a primary's 2 x $39.99
+      // seat subscription — newer than his own plan and equally active — won,
+      // and the admin reported what he pays for other people as his own rate.
+      const byCustomerSubs = new Map<string, { customer: Stripe.Customer; subs: Stripe.Subscription[] }>();
 
       for await (const sub of stripe().subscriptions.list({
         status: 'all',
@@ -665,22 +732,43 @@ export const stripeSource: DataSource = {
 
         const customer = sub.customer as Stripe.Customer;
         if (typeof customer === 'string' || customer.deleted) continue;
-        const built = await buildSubscriberFromCustomer(customer, sub, catalog, coupons);
-        const existing = byCustomer.get(customer.id);
-        if (!existing) {
-          byCustomer.set(customer.id, built.subscriber);
-          continue;
-        }
-        const newRank = rank[built.subscriber.status];
-        const oldRank = rank[existing.status];
-        if (newRank > oldRank || (newRank === oldRank && built.subscriber.startDate > existing.startDate)) {
-          byCustomer.set(customer.id, built.subscriber);
-        }
+        const entry = byCustomerSubs.get(customer.id);
+        if (entry) entry.subs.push(sub);
+        else byCustomerSubs.set(customer.id, { customer, subs: [sub] });
       }
 
-      const list = Array.from(byCustomer.values()).sort((a, b) =>
-        a.startDate < b.startDate ? 1 : -1
-      );
+      // Their own plan, best first: active beats paused beats cancelled, newest
+      // breaks a tie. Stripe writes a fresh subscription record on every
+      // resubscribe, which is the reason a customer has more than one at all.
+      const rank: Record<string, number> = { active: 4, trialing: 4, past_due: 3, paused: 3, unpaid: 3, canceled: 2 };
+      const best = (subs: Stripe.Subscription[]): Stripe.Subscription | null =>
+        subs.reduce<Stripe.Subscription | null>((winner, s) => {
+          if (!winner) return s;
+          const a = rank[s.status] ?? 1;
+          const b = rank[winner.status] ?? 1;
+          return a > b || (a === b && s.created > winner.created) ? s : winner;
+        }, null);
+
+      const list: Subscriber[] = [];
+      for (const { customer, subs } of byCustomerSubs.values()) {
+        const own = subs.filter((s) => isOwnMembershipSub(s, catalog));
+        // Someone whose only subscription is a family plan pays for other
+        // people and holds no membership themselves. They still belong in the
+        // list — falling back to `subs` keeps them visible rather than making
+        // a paying customer disappear — but the seat figures below say plainly
+        // that the money is other people's.
+        const chosen = best(own.length ? own : subs);
+        const built = await buildSubscriberFromCustomer(customer, chosen, catalog, coupons);
+        const family = familySeatMonthly(subs, catalog, coupons);
+        list.push({
+          ...built.subscriber,
+          hasOwnMembership: own.length > 0,
+          familySeatMonthly: family.monthly || undefined,
+          familySeats: family.seats || undefined,
+        });
+      }
+
+      list.sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
       cachedAllSubscribers = { value: list, expires: Date.now() + SUBS_TTL_MS };
     }
 
@@ -698,9 +786,12 @@ export const stripeSource: DataSource = {
       const coupons = await getCoupons();
       const customer = await stripe().customers.retrieve(id);
       if ((customer as Stripe.DeletedCustomer).deleted) return null;
-      const subs = await stripe().subscriptions.list({ customer: id, status: 'all', limit: 10, expand: ['data.discounts'] });
-      // Prefer the membership sub (customers can also carry add-on-only subs)
-      const membershipSub = subs.data.find((s) => isMembershipSub(s, catalog)) ?? subs.data[0] ?? null;
+      const subs = await stripe().subscriptions.list({ customer: id, status: 'all', limit: 20, expand: ['data.discounts'] });
+      // Their own plan — never the family-seat subscription, which is billed on
+      // the same prices and would otherwise report other people's seats as this
+      // person's rate.
+      const own = subs.data.filter((s) => isOwnMembershipSub(s, catalog));
+      const membershipSub = own[0] ?? subs.data.find((s) => isMembershipSub(s, catalog)) ?? subs.data[0] ?? null;
       const built = await buildSubscriberFromCustomer(
         customer as Stripe.Customer,
         membershipSub,
@@ -708,7 +799,13 @@ export const stripeSource: DataSource = {
         coupons,
         { includeInvoices: true }
       );
-      return built.subscriber;
+      const family = familySeatMonthly(subs.data, catalog, coupons);
+      return {
+        ...built.subscriber,
+        hasOwnMembership: own.length > 0,
+        familySeatMonthly: family.monthly || undefined,
+        familySeats: family.seats || undefined,
+      };
     } catch (err) {
       if ((err as { code?: string })?.code === 'resource_missing') return null;
       throw err;

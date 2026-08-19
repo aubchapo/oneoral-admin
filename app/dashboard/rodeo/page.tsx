@@ -30,8 +30,11 @@ type Member = {
   city: string | null;
   via: 'direct' | 'household';
   householdOf: string | null;
+  seatTier: string | null;
   status: string;
   monthlyAmount: number | null;
+  familySeatMonthly: number | null;
+  familySeats: number | null;
   startDate: string | null;
   inferred: boolean;
 };
@@ -44,6 +47,7 @@ type StateRow = {
   direct: number;
   household: number;
   mrr: number;
+  seatSpendElsewhere: number;
 };
 
 type Payload = {
@@ -54,6 +58,7 @@ type Payload = {
     direct: number;
     household: number;
     mrr: number;
+    seatSpendElsewhere: number;
     inferred: number;
     allMembers: number;
   };
@@ -175,7 +180,8 @@ export default function RodeoPage() {
                       <th className="py-2 pr-4">Active</th>
                       <th className="py-2 pr-4">Own plan</th>
                       <th className="py-2 pr-4">Household seat</th>
-                      <th className="py-2">MRR</th>
+                      <th className="py-2 pr-4">MRR</th>
+                      <th className="py-2">Seats paid elsewhere</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -195,13 +201,21 @@ export default function RodeoPage() {
                         <td className="py-2.5 pr-4 text-slate-600">{s.active}</td>
                         <td className="py-2.5 pr-4 text-slate-600">{s.direct}</td>
                         <td className="py-2.5 pr-4 text-slate-600">{s.household}</td>
-                        <td className="py-2.5 text-slate-600">{money(s.mrr)}</td>
+                        <td className="py-2.5 pr-4 text-slate-600">{money(s.mrr)}</td>
+                        <td className="py-2.5 text-slate-400">
+                          {s.seatSpendElsewhere ? money(s.seatSpendElsewhere) : '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 text-xs text-slate-400">Click a state to filter the list below.</p>
+              <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                Click a state to filter the list below. MRR is each member&apos;s own plan including recurring add-ons,
+                and each seat at its own rate — never the household total, which belongs to the people sitting in the
+                seats. &ldquo;Seats paid elsewhere&rdquo; is what members here pay for relatives in other states; those
+                relatives are counted in their own state, not this one.
+              </p>
             </CardContent>
           </Card>
 
@@ -286,9 +300,25 @@ export default function RodeoPage() {
                           </td>
                           <td className="py-2.5 pr-4 text-slate-600">
                             {m.monthlyAmount == null ? (
-                              <span className="text-slate-400">on primary</span>
+                              <span className="text-slate-400">—</span>
                             ) : (
-                              money(m.monthlyAmount)
+                              <>
+                                <span className={m.status === 'paused' || m.status === 'cancelled' ? 'text-slate-400' : ''}>
+                                  {money(m.monthlyAmount)}
+                                </span>
+                                {m.via === 'household' && (
+                                  <p className="text-xs text-slate-400">seat · billed to primary</p>
+                                )}
+                                {/* What they pay for OTHER people. Those people
+                                    are counted in their own states, so this
+                                    money is theirs and not this cohort's. */}
+                                {!!m.familySeatMonthly && (
+                                  <p className="text-xs text-slate-400">
+                                    + {money(m.familySeatMonthly)} for {m.familySeats}{' '}
+                                    {m.familySeats === 1 ? 'seat' : 'seats'} elsewhere
+                                  </p>
+                                )}
+                              </>
                             )}
                           </td>
                           <td className="py-2.5 text-slate-600">{fmtDate(m.startDate)}</td>

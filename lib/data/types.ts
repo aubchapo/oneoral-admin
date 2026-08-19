@@ -103,6 +103,16 @@ export interface Subscriber {
    * guess, and a segment built on guesses should say so.
    */
   shipStateFromBilling?: boolean;
+  /**
+   * What this customer pays for OTHER people's seats, and how many. Kept apart
+   * from `monthlyAmount` on purpose: a primary paying 2 x $39.99 for family
+   * members was having that total reported as his own rate, when his plan is a
+   * different subscription at a different price.
+   */
+  familySeatMonthly?: number;
+  familySeats?: number;
+  /** False for someone who only pays for others and holds no plan themselves. */
+  hasOwnMembership?: boolean;
   // Back-compat
   plan: string;
   solution: string;

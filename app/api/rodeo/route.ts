@@ -25,6 +25,13 @@ import type { Subscriber } from '@/lib/data/types';
  * Two populations, because they hold their address in different places:
  *   • primaries    — Stripe customer `shipping.address` (the data source)
  *   • family seats — the marketing app's own User row, via /api/internal/households
+ *
+ * A family seat belongs to the person sitting in it, not to whoever pays. A
+ * Texas primary paying for two relatives in California has one Rodeo member
+ * (himself) and two Californians — and the money for those two seats is
+ * California money even though a Texan's card settles it. So seats are placed
+ * by their own ship-to and priced from their own tier, and what the primary
+ * spends on other people is reported next to his row rather than inside it.
  */
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +60,9 @@ type HouseholdsPayload = {
   }[];
 };
 
+/** What a seat costs, by tier — the same table the marketing app bills from. */
+const SEAT_MONTHLY: Record<string, number> = { family: 39.99, student: 30 };
+
 type RodeoMember = {
   id: string;
   name: string;
@@ -63,8 +73,17 @@ type RodeoMember = {
   via: 'direct' | 'household';
   /** Household seats only — who pays for them. */
   householdOf: string | null;
+  seatTier: string | null;
   status: string;
+  /**
+   * What THIS member costs per month: their own plan including recurring
+   * add-ons, or the price of their seat. Never the payer's household total.
+   */
   monthlyAmount: number | null;
+  /** Direct members only — what they additionally pay for other people's
+   *  seats. Those people are counted in their own states, not here. */
+  familySeatMonthly: number | null;
+  familySeats: number | null;
   startDate: string | null;
   /**
    * No separate `shipping` address existed, so the state came from the single
@@ -111,9 +130,14 @@ async function householdMembers(): Promise<{ rows: RodeoMember[]; error: string 
           city,
           via: 'household',
           householdOf: h.primary.name || h.primary.email,
+          seatTier: m.seatTier ?? null,
           status: m.status,
-          // A seat bills on the primary's invoice, not their own.
-          monthlyAmount: null,
+          // Their seat's own rate. It settles on the primary's invoice, which
+          // is a billing detail — it is still this member's cost, and pinning
+          // it to the payer is what made a Texan's row read $79.98.
+          monthlyAmount: SEAT_MONTHLY[m.seatTier] ?? SEAT_MONTHLY.family,
+          familySeatMonthly: null,
+          familySeats: null,
           startDate: m.joinedAt.slice(0, 10),
           inferred: false,
         });
@@ -140,8 +164,11 @@ export async function GET(_req: NextRequest) {
       city: s.shipCity ?? null,
       via: 'direct' as const,
       householdOf: null,
+      seatTier: null,
       status: s.status,
       monthlyAmount: s.monthlyAmount,
+      familySeatMonthly: s.familySeatMonthly ?? null,
+      familySeats: s.familySeats ?? null,
       startDate: s.startDate,
       inferred: !!s.shipStateFromBilling,
     }));
@@ -160,8 +187,21 @@ export async function GET(_req: NextRequest) {
       active: rows.filter((m) => m.status === 'active').length,
       direct: rows.filter((m) => m.via === 'direct').length,
       household: rows.filter((m) => m.via === 'household').length,
-      // Only paying subscriptions carry an amount; seats bill on the primary.
-      mrr: Math.round(rows.reduce((n, m) => n + (m.status === 'active' ? m.monthlyAmount ?? 0 : 0), 0) * 100) / 100,
+      // Every member's own cost, seats included. A seat settles on someone
+      // else's card, possibly in another state — the member is still here, and
+      // so is what they're worth.
+      mrr:
+        Math.round(
+          rows.reduce(
+            // Cancelled bills nothing and paused bills nothing — only the
+            // seat statuses ('active' / 'onboarding') and live plans count.
+            (n, m) => n + (m.status === 'cancelled' || m.status === 'paused' ? 0 : m.monthlyAmount ?? 0),
+            0,
+          ) * 100,
+        ) / 100,
+      /** Paid by members here for seats held by people elsewhere. */
+      seatSpendElsewhere:
+        Math.round(rows.reduce((n, m) => n + (m.familySeatMonthly ?? 0), 0) * 100) / 100,
     };
   });
 
@@ -173,6 +213,7 @@ export async function GET(_req: NextRequest) {
       direct: direct.length,
       household: household.rows.length,
       mrr: Math.round(states.reduce((n, s) => n + s.mrr, 0) * 100) / 100,
+      seatSpendElsewhere: Math.round(states.reduce((n, s) => n + s.seatSpendElsewhere, 0) * 100) / 100,
       inferred: members.filter((m) => m.inferred).length,
       // The base the segment was cut from, so a small cohort reads as a share
       // rather than a bare number.
