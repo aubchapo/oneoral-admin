@@ -392,6 +392,13 @@ async function buildSubscriberFromCustomer(
     membershipSpent = Math.round(months * monthlyAmount * 100) / 100;
   }
 
+  // Delivery beats billing, always. `customer.address` is what the card says;
+  // `customer.shipping.address` is where the box goes, and the two diverge the
+  // moment someone moves without reissuing a card.
+  const shipAddress = customer.shipping?.address ?? null;
+  const billingAddress = customer.address ?? null;
+  const deliveryAddress = shipAddress ?? billingAddress;
+
   const subscriber: Subscriber = {
     id: customer.id,
     email: customer.email ?? '',
@@ -412,6 +419,9 @@ async function buildSubscriberFromCustomer(
     foundingSlot: subscription?.metadata?.foundingWhiteningSlot
       ? Number(subscription.metadata.foundingWhiteningSlot)
       : undefined,
+    shipState: deliveryAddress?.state?.toUpperCase() || undefined,
+    shipCity: deliveryAddress?.city || undefined,
+    shipStateFromBilling: !shipAddress?.state && !!billingAddress?.state ? true : undefined,
     plan: MEMBERSHIP_NAME,
     solution: 'cavities',
   };

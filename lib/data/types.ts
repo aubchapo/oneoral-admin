@@ -89,6 +89,20 @@ export interface Subscriber {
    */
   isFounding?: boolean;
   foundingSlot?: number;
+  /**
+   * Where the kit actually goes — read from the Stripe customer's SHIPPING
+   * address, not the billing one. Someone who moves to Texas keeps a
+   * California card, and billing would file them under the wrong state for
+   * good; delivery is the only field that says where a member lives.
+   */
+  shipState?: string;
+  shipCity?: string;
+  /**
+   * True when no shipping address existed and the billing address was read
+   * instead. Shown rather than hidden: a state inferred from billing is a
+   * guess, and a segment built on guesses should say so.
+   */
+  shipStateFromBilling?: boolean;
   // Back-compat
   plan: string;
   solution: string;
