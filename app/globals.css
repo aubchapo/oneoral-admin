@@ -5,6 +5,12 @@
 :root {
   --background: #f9f6f0;
   --foreground: #1a1a1a;
+  /* Chart series/axis colors — referenced by recharts via var() so they can
+     flip with the theme (a stroke attribute can only hold one value). */
+  --chart-primary: #1a3d2b;
+  --chart-secondary: #2d6a47;
+  --chart-axis: #78716c;
+  --chart-grid: #e7e5e4;
 }
 
 body {
@@ -27,6 +33,10 @@ body {
 .dark {
   --background: #0c1712;
   --foreground: #e8ece6;
+  --chart-primary: #7ecfb0;
+  --chart-secondary: #4daf8c;
+  --chart-axis: #7d8c81;
+  --chart-grid: #1e2f26;
 }
 
 .dark ::-webkit-scrollbar-track { background: #0c1712; }

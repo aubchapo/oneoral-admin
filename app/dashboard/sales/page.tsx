@@ -130,12 +130,12 @@ export default function SalesPage() {
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-                    <XAxis dataKey="month" stroke="#78716c" />
-                    <YAxis stroke="#78716c" tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                    <XAxis dataKey="month" stroke="var(--chart-axis)" />
+                    <YAxis stroke="var(--chart-axis)" tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                     <Legend />
-                    <Line type="monotone" dataKey="membership" stroke="#1a3d2b" strokeWidth={3} name="Membership" />
+                    <Line type="monotone" dataKey="membership" stroke="var(--chart-primary)" strokeWidth={3} name="Membership" />
                     <Line type="monotone" dataKey="addons" stroke="#7ecfb0" strokeWidth={3} name="Add-ons" />
                   </LineChart>
                 </ResponsiveContainer>
@@ -149,12 +149,12 @@ export default function SalesPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-                    <XAxis dataKey="month" stroke="#78716c" />
-                    <YAxis stroke="#78716c" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                    <XAxis dataKey="month" stroke="var(--chart-axis)" />
+                    <YAxis stroke="var(--chart-axis)" />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="newSubs" fill="#2d6a47" name="New" />
+                    <Bar dataKey="newSubs" fill="var(--chart-secondary)" name="New" />
                     <Bar dataKey="churn" fill="#ef4444" name="Churn" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -203,11 +203,11 @@ export default function SalesPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.addonSales} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-                    <XAxis type="number" stroke="#78716c" tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                    <YAxis dataKey="name" type="category" stroke="#78716c" width={130} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                    <XAxis type="number" stroke="var(--chart-axis)" tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                    <YAxis dataKey="name" type="category" stroke="var(--chart-axis)" width={130} />
                     <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                    <Bar dataKey="revenue" fill="#1a3d2b" radius={[0, 8, 8, 0]} />
+                    <Bar dataKey="revenue" fill="var(--chart-primary)" radius={[0, 8, 8, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

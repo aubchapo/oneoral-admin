@@ -202,12 +202,12 @@ export default function TrafficPage() {
                           <stop offset="100%" stopColor="#7ecfb0" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-                      <XAxis dataKey="day" stroke="#78716c" tickFormatter={(d: string) => d.slice(5)} />
-                      <YAxis stroke="#78716c" allowDecimals={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+                      <XAxis dataKey="day" stroke="var(--chart-axis)" tickFormatter={(d: string) => d.slice(5)} />
+                      <YAxis stroke="var(--chart-axis)" allowDecimals={false} />
                       <Tooltip />
                       <Legend />
-                      <Area type="monotone" dataKey="pageviews" stroke="#1a3d2b" strokeWidth={2.5} fill="url(#pv)" name="Pageviews" />
+                      <Area type="monotone" dataKey="pageviews" stroke="var(--chart-primary)" strokeWidth={2.5} fill="url(#pv)" name="Pageviews" />
                       <Area type="monotone" dataKey="visitors" stroke="#7ecfb0" strokeWidth={2.5} fill="url(#vis)" name="Visitors" />
                     </AreaChart>
                   </ResponsiveContainer>
