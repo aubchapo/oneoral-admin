@@ -17,3 +17,48 @@ body {
 ::-webkit-scrollbar-track { background: #f0ede8; }
 ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+
+/* ── Dark mode ────────────────────────────────────────────────────────────
+   This app predates semantic color tokens — pages use slate/white/cream
+   utilities directly, so dark mode remaps the handful of classes that cover
+   ~95% of the UI (see the frequency audit before adding more). Brand-green
+   tinted dark palette, not neutral gray, so it still reads as OneOral.
+   Toggle lives in the Sidebar; `dark` class on <html>. */
+.dark {
+  --background: #0c1712;
+  --foreground: #e8ece6;
+}
+
+.dark ::-webkit-scrollbar-track { background: #0c1712; }
+.dark ::-webkit-scrollbar-thumb { background: #2c4237; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #3d5a4a; }
+
+/* surfaces */
+.dark .bg-white { background-color: #14231b; }
+.dark .bg-cream { background-color: #0c1712; }
+.dark .bg-slate-50 { background-color: #182820; }
+.dark .bg-slate-100 { background-color: #1d2f26; }
+.dark .bg-slate-200 { background-color: #24382d; }
+.dark .bg-slate-700 { background-color: #33503f; }
+.dark .bg-slate-900 { background-color: #223428; }
+.dark .bg-white\/95 { background-color: rgba(20, 35, 27, 0.95); }
+.dark .bg-white\/70 { background-color: rgba(20, 35, 27, 0.7); }
+
+/* text */
+.dark .text-slate-900 { color: #eceee9; }
+.dark .text-slate-800 { color: #dbe1d8; }
+.dark .text-slate-700 { color: #c3ccc3; }
+.dark .text-slate-600 { color: #a5b3a7; }
+.dark .text-slate-500 { color: #8f9d92; }
+.dark .text-slate-400 { color: #7d8c81; }
+
+/* borders + dividers */
+.dark .border-slate-200 { border-color: #24382d; }
+.dark .border-slate-100 { border-color: #1e2f26; }
+.dark .border-slate-300 { border-color: #2c4237; }
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e2f26; }
+
+/* inputs on dark surfaces */
+.dark input, .dark select, .dark textarea {
+  color-scheme: dark;
+}

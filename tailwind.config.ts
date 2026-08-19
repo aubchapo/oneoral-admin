@@ -1,6 +1,10 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  // Class strategy: the toggle lives in the Sidebar, persisted to
+  // localStorage; globals.css carries the dark palette as overrides on the
+  // common light utilities (this app predates semantic color tokens).
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',

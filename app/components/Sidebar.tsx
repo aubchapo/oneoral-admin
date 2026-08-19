@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/app/lib/utils';
@@ -18,6 +18,8 @@ import {
   Inbox,
   GraduationCap,
   Gift,
+  Sun,
+  Moon,
   LogOut,
   Menu,
   X,
@@ -95,6 +97,7 @@ export default function Sidebar() {
             <p className="text-xs text-slate-500 truncate">{user.email}</p>
           </div>
         )}
+        <ThemeToggle />
         <button
           onClick={() => logout()}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all"
@@ -135,5 +138,34 @@ export default function Sidebar() {
         <Content />
       </aside>
     </>
+  );
+}
+
+// Light/dark toggle. The initial value is read from <html> after mount — the
+// anti-flash script in layout.tsx has already applied the stored choice, so
+// we mirror it rather than re-derive it (avoids a hydration mismatch).
+function ThemeToggle() {
+  const [dark, setDark] = useState<boolean | null>(null);
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains('dark'));
+  }, []);
+
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    try { localStorage.setItem('oo-admin-theme', next ? 'dark' : 'light'); } catch {}
+  };
+
+  if (dark === null) return <div className="h-9" />; // placeholder, no layout shift
+  return (
+    <button
+      onClick={toggle}
+      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all"
+    >
+      {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      {dark ? 'Light mode' : 'Dark mode'}
+    </button>
   );
 }
