@@ -1,11 +1,11 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import type { User } from './types';
+import type { SessionUser } from './auth/session';
 
 interface AuthContextType {
-  user: User | null;
+  user: SessionUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -13,89 +13,56 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock admin user for demo
-const MOCK_ADMIN: User = {
-  id: 'admin-001',
-  email: 'alang@oneoral.com',
-  name: 'Aubrey Lang',
-  role: 'ADMIN',
-  createdAt: '2025-01-01T00:00:00Z',
-  updatedAt: '2025-01-01T00:00:00Z',
-};
-
-// Valid mock credentials
-const MOCK_CREDENTIALS = [
-  { email: 'alang@oneoral.com', password: 'admin123', user: MOCK_ADMIN },
-  { email: 'dr.smith@oneoral.com', password: 'doctor123', user: { ...MOCK_ADMIN, id: 'dr-001', email: 'dr.smith@oneoral.com', name: 'Dr. John Smith', role: 'DOCTOR' as const } },
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
   const router = useRouter();
 
-  // Use a separate effect for initialization that only runs once.
-  // Real access control is the HTTP Basic gate in proxy.ts — anyone who
-  // reaches this code is already authenticated, so sign them in automatically
-  // instead of showing a second (mock) login form.
+  // The session cookie is httpOnly, so the browser can't read it directly —
+  // ask the server who we are. The proxy has already turned away anyone
+  // without a session, so this is about *which* colleague is signed in.
   useEffect(() => {
-    if (initialized) return;
-
-    let resolved: User | null = null;
-    const savedUser = localStorage.getItem('admin_user');
-    if (savedUser) {
+    let cancelled = false;
+    (async () => {
       try {
-        const userData = JSON.parse(savedUser);
-        if (userData.role === 'ADMIN' || userData.role === 'DOCTOR') {
-          resolved = userData;
-        }
+        const response = await fetch('/api/auth/me', { cache: 'no-store' });
+        const data = await response.json().catch(() => ({ user: null }));
+        if (!cancelled) setUser(response.ok ? data.user : null);
       } catch {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_user');
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
-    if (!resolved) {
-      resolved = MOCK_ADMIN;
-      localStorage.setItem('admin_token', 'auto-' + Date.now());
-      localStorage.setItem('admin_user', JSON.stringify(MOCK_ADMIN));
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUser(resolved);
-    setLoading(false);
-    setInitialized(true);
-  }, [initialized]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const login = async (email: string, password: string) => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Invalid email or password.');
 
-    // Check mock credentials
-    const match = MOCK_CREDENTIALS.find(
-      cred => cred.email === email && cred.password === password
-    );
+      setUser(data.user);
+      router.replace('/dashboard');
+    },
+    [router],
+  );
 
-    if (!match) {
-      throw new Error('Invalid email or password');
-    }
-
-    localStorage.setItem('admin_token', 'mock-token-' + Date.now());
-    localStorage.setItem('admin_user', JSON.stringify(match.user));
-    setUser(match.user as User);
-    router.push('/');
-  };
-
-  const logout = async () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
+  const logout = useCallback(async () => {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null);
-    router.push('/login');
-  };
+    router.replace('/login');
+  }, [router]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
   );
 }
 
