@@ -83,27 +83,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={async () => {
-                setError('');
-                setLoading(true);
-                try {
-                  await login('alang@oneoral.com', 'admin123');
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : 'Demo sign-in failed');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              disabled={loading}
-              className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors disabled:opacity-50 text-sm"
-            >
-              Sign in as Demo Admin
-            </button>
-          </div>
         </div>
       </div>
     </div>

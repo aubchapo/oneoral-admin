@@ -79,6 +79,24 @@ body {
 .dark .hover\:text-primary-700:hover { color: #a8e6cf; }
 .dark .border-primary-600 { border-color: #4daf8c; }
 .dark .bg-primary-50 { background-color: #14261d; }
+/* The login page is the one screen built on the `gray` ramp rather than
+   `slate` (the two ramps hold identical values; only the name differs), so
+   none of the remaps above reached it — near-black label text sat on the
+   remapped dark card. It went unnoticed because the page was unreachable
+   until sign-in became real: the old mock signed everyone in on arrival.
+   `text-gray-800` / `bg-gray-100` are deliberately NOT here — that pair is
+   the "lost" lead badge, light-on-light by design like its siblings. */
+.dark .text-gray-900 { color: #eceee9; }
+.dark .text-gray-700 { color: #c3ccc3; }
+.dark .text-gray-500 { color: #8f9d92; }
+.dark .text-gray-400 { color: #7d8c81; }
+.dark .border-gray-300 { border-color: #2c4237; }
+.dark .border-gray-200 { border-color: #24382d; }
+
+/* A focus ring in the brand's deep green is invisible against the dark
+   ground it is drawn on — keyboard users lose their place. */
+.dark .focus\:ring-primary-500:focus { --tw-ring-color: #4daf8c; }
+
 /* traffic page's Top Pages/Referrers bars: dark green at 70% is invisible
    on the dark track — mint instead */
 .dark .bg-primary-600\/70 { background-color: rgba(126, 207, 176, 0.45); }

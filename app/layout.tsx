@@ -11,7 +11,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    // The theme script below sets `class="dark"` before React hydrates, so the
+    // server markup and the client tree disagree on <html> by design.
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Apply the stored theme before first paint so dark mode doesn't
             flash light. Defaults to the OS preference when unset. */}
